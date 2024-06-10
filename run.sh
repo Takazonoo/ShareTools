@@ -21,8 +21,8 @@ wget -P lib ${MYSQL_JDBC_URL}
 if [ ! -f build.xml ]; then
     cat <<EOL > build.xml
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="ToolHost" default="default" basedir=".">
-    <description>Builds, tests, and runs the project ToolHost.</description>
+<project name="ShareTools" default="default" basedir=".">
+    <description>Builds, tests, and runs the project ShareTools.</description>
 
     <!-- Definir propriedades -->
     <property name="src.dir" value="src"/>
@@ -50,7 +50,7 @@ if [ ! -f build.xml ]; then
 
     <!-- Criar o arquivo JAR -->
     <target name="jar" depends="compile">
-        <jar destfile="\${dist.dir}/ToolHost.jar" basedir="\${build.dir}">
+        <jar destfile="\${dist.dir}/ShareTools.jar" basedir="\${build.dir}">
             <manifest>
                 <attribute name="Main-Class" value="MainClass"/> <!-- Ajustar conforme sua classe principal -->
             </manifest>
