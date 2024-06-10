@@ -57,19 +57,19 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 INSERT INTO `mysql`.`tb_amigos`
 (nome, telefone, qtd_emprestimos)
 VALUES
-("Ricardo", 4899167906, 0),
-("Edson", 4884194059, 1),
-("Richard", 48912345678, 0),
-("Irene", 48987654321, 1);
+("Diego", 48985452211, 0),
+("Caio", 4884194059, 1),
+("Leonardo", 48912345678, 0),
+("Lucas", 48987654321, 1);
 
 
 INSERT INTO `mysql`.`tb_ferramentas`
 (nome, marca, custo_aquisicao)
 VALUES
-("Martelo", "Stanley", 60),
-("Chave inglesa", "Vonder", 58.90),
-("Chave Phillips", "Sparta", 5.87),
-("Alicate", "Tramontina", 20);
+("Martelo", "Stanley", 65),
+("Chave inglesa", "Vonder", 55.90),
+("Chave Phillips", "Sparta", 7.87),
+("Alicate", "Tramontina", 28);
 
 
 INSERT INTO `mysql`.`tb_emprestimos`
