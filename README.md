@@ -59,7 +59,9 @@ Para gerar apenas o pacote, use `.\run.cmd --build-only` no Windows ou `ant jar`
 
 1. Cadastre um amigo e uma ferramenta nas telas correspondentes. Anote os IDs exibidos nas tabelas.
 2. Abra **Empréstimos**, informe os dois IDs e preencha a data no formato `DD-MM-AAAA`. Deixe a devolução em branco para registrar um empréstimo pendente.
-3. Quando a ferramenta voltar, selecione o empréstimo, preencha a data de devolução e clique em **Editar**. O status muda para **Concluído**. O dia da devolução faz parte do período ocupado.
+3. Quando a ferramenta voltar, selecione a linha do empréstimo na tabela, preencha a data de devolução e clique em **Editar**. O status muda para **Concluído**. O dia da devolução faz parte do período ocupado.
+
+Use **Voltar ao menu** para trocar de tela. As ações **Editar** e **Excluir** ficam disponíveis ao selecionar uma linha na tabela.
 
 ### Banco de dados próprio
 

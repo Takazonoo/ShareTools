@@ -1,10 +1,12 @@
 package View;
 
 import java.awt.Component;
+import java.awt.Dimension;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 
 public class Mensagens extends Exception {
     Mensagens(String mensagem) {
@@ -15,7 +17,16 @@ public class Mensagens extends Exception {
         if (erro.getCause() != null) {
             Logger.getLogger(Mensagens.class.getName()).log(Level.WARNING, erro.getMessage(), erro);
         }
-        JOptionPane.showMessageDialog(tela, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
+        JTextArea mensagem = new JTextArea(erro.getMessage());
+        mensagem.setLineWrap(true);
+        mensagem.setWrapStyleWord(true);
+        mensagem.setEditable(false);
+        mensagem.setOpaque(false);
+        mensagem.setFont(javax.swing.UIManager.getFont("Label.font"));
+        int largura = 32 * mensagem.getFontMetrics(mensagem.getFont()).charWidth('m');
+        mensagem.setSize(largura, Short.MAX_VALUE);
+        mensagem.setPreferredSize(new Dimension(largura, mensagem.getPreferredSize().height));
+        JOptionPane.showMessageDialog(tela, mensagem, "Aviso", JOptionPane.WARNING_MESSAGE);
     }
 
     static int idSelecionado(JTable tabela) throws Mensagens {
