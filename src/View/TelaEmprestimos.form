@@ -133,6 +133,7 @@
   <SubComponents>
     <Component class="javax.swing.JFormattedTextField" name="campoDataPed">
       <Properties>
+        <Property name="focusLostBehavior" type="int" value="3"/>
         <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
           <Color blue="00" green="00" red="00" type="rgb"/>
 
@@ -145,7 +146,7 @@
         </Property>
       </Properties>
       <AuxValues>
-        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(mascaraData)"/>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(mascaraCampo())"/>
       </AuxValues>
     </Component>
     <Component class="javax.swing.JTextField" name="campoFerramenta">
@@ -285,6 +286,7 @@
     </Container>
     <Component class="javax.swing.JFormattedTextField" name="campoDataDev">
       <Properties>
+        <Property name="focusLostBehavior" type="int" value="3"/>
         <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
           <Color blue="00" green="00" red="00" type="rgb"/>
 
@@ -298,7 +300,7 @@
         </Property>
       </Properties>
       <AuxValues>
-        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(mascaraData)"/>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(mascaraCampo())"/>
       </AuxValues>
     </Component>
     <Component class="javax.swing.JTextField" name="campoAmigo">

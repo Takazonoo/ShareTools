@@ -1,18 +1,21 @@
-version: '3.8'
-
 services:
   mysql:
-    image: mysql:latest
-    container_name: mysql
+    image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: develop
-      MYSQL_DATABASE: mysql
+      MYSQL_ROOT_PASSWORD: ${SHARETOOLS_MYSQL_ROOT_PASSWORD:-develop}
+      MYSQL_DATABASE: sharetools
       MYSQL_USER: develop
-      MYSQL_PASSWORD: develop
+      MYSQL_PASSWORD: ${SHARETOOLS_DB_PASSWORD:-develop}
     ports:
-      - "3306:3306"
+      - "127.0.0.1:${SHARETOOLS_DB_PORT:-3306}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - sharetools_data:/var/lib/mysql
+      - ./ScriptsSQL/scripts.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h 127.0.0.1 -u develop -p\"$$MYSQL_PASSWORD\" sharetools -e 'SELECT 1 FROM tb_emprestimos LIMIT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
-  mysql_data:
+  sharetools_data:

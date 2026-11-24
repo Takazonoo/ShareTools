@@ -1,58 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="ShareTools" default="default" basedir=".">
-    <description>Builds, tests, and runs the project ShareTools.</description>
+<project name="ShareTools" default="jar" basedir=".">
+    <property name="classes.dir" location="build/classes"/>
+    <property name="dist.dir" location="dist"/>
+    <property name="driver.jar" location="lib/mysql-connector-j-8.4.0.jar"/>
+    <property name="main.class" value="Principal.Principal"/>
 
-    <!-- Definir propriedades -->
-    <property name="src.dir" value="src"/>
-    <property name="build.dir" value="build"/>
-    <property name="dist.dir" value="dist"/>
-    <property name="lib.dir" value="lib"/>
-    <property name="mysql.driver.jar" value="${lib.dir}/mysql-connector-java-8.0.33.jar"/>
-
-    <!-- Garantir que os diretórios necessários existam -->
-    <target name="init">
-        <mkdir dir="${build.dir}"/>
-        <mkdir dir="${dist.dir}"/>
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="src" destdir="${classes.dir}" release="17" encoding="UTF-8" includeantruntime="false"/>
+        <copy todir="${classes.dir}/Imagens">
+            <fileset dir="src/Imagens"/>
+        </copy>
     </target>
 
-    <!-- Compilar o código Java -->
-    <target name="compile" depends="init">
-        <javac srcdir="${src.dir}" destdir="${build.dir}">
-            <classpath>
-                <fileset dir="${lib.dir}">
-                    <include name="**/*.jar"/>
-                </fileset>
-            </classpath>
-        </javac>
-    </target>
-
-    <!-- Criar o arquivo JAR -->
     <target name="jar" depends="compile">
-        <jar destfile="${dist.dir}/ShareTools.jar" basedir="${build.dir}">
-            <manifest>
-                <attribute name="Main-Class" value="MainClass"/> <!-- Ajustar conforme sua classe principal -->
-            </manifest>
-        </jar>
+        <mkdir dir="${dist.dir}/lib"/>
+        <copy file="${driver.jar}" todir="${dist.dir}/lib"/>
+        <jar destfile="${dist.dir}/ShareTools.jar" basedir="${classes.dir}" manifest="manifest.mf"/>
     </target>
 
-    <!-- Executar o projeto -->
-    <target name="run" depends="compile">
-        <java fork="true" classname="MainClass" classpath="${build.dir}:${mysql.driver.jar}">
-            <classpath>
-                <pathelement path="${build.dir}"/>
-                <fileset dir="${lib.dir}">
-                    <include name="**/*.jar"/>
-                </fileset>
-            </classpath>
-        </java>
+    <target name="run" depends="jar">
+        <java jar="${dist.dir}/ShareTools.jar" fork="true" failonerror="true"/>
     </target>
 
-    <!-- Limpar o diretório de build -->
     <target name="clean">
-        <delete dir="${build.dir}"/>
+        <delete dir="build"/>
         <delete dir="${dist.dir}"/>
     </target>
-
-    <!-- Target padrão -->
-    <target name="default" depends="jar"/>
 </project>

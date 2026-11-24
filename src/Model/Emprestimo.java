@@ -9,7 +9,6 @@ public class Emprestimo {
     private Ferramenta emprestimoFerramenta; // Ferramenta associada ao empréstimo
     private Date dataEmprestimo; // Data em que a ferramenta foi emprestada
     private Date dataDevolucao; // Data em que a ferramenta foi devolvida
-    private boolean emprestimoStatus; // Status do empréstimo (concluído ou pendente)
 
     // Construtor padrão
     public Emprestimo() {
@@ -22,7 +21,6 @@ public class Emprestimo {
         this.emprestimoFerramenta = ferramenta;
         this.dataEmprestimo = dataEmprestimo;
         this.dataDevolucao = dataDevolucao;
-        this.emprestimoStatus = (dataDevolucao != null); // Status é verdadeiro se a data de devolução não for nula
     }
 
     // Construtor para cadastro de um novo empréstimo sem ID (normalmente gerado automaticamente pelo banco de dados)
@@ -31,7 +29,6 @@ public class Emprestimo {
         this.emprestimoFerramenta = ferramenta;
         this.dataEmprestimo = dataEmprestimo;
         this.dataDevolucao = dataDevolucao;
-        this.emprestimoStatus = (dataDevolucao != null); // Status é verdadeiro se a data de devolução não for nula
     }
 
     // Getter para o ID do empréstimo
@@ -86,12 +83,7 @@ public class Emprestimo {
 
     // Getter para o status do empréstimo (concluído ou pendente)
     public boolean isStatus() {
-        return emprestimoStatus;
-    }
-
-    // Setter para o status do empréstimo
-    public void setStatus(boolean status) {
-        this.emprestimoStatus = status;
+        return dataDevolucao != null;
     }
 
     // Método toString para retornar uma representação textual do empréstimo
