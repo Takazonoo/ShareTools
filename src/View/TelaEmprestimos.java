@@ -5,12 +5,7 @@ import Model.Emprestimo;
 import java.awt.Color;
 import java.awt.Font;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
@@ -21,33 +16,82 @@ import javax.swing.text.MaskFormatter;
 
 public class TelaEmprestimos extends javax.swing.JFrame {
     
-    private EmprestimoDAO emprestimoDAO;
-    private AmigoDAO amigoDAO;
-    private FerramentaDAO ferramentaDAO;
-    private MaskFormatter mascaraData;
-    
+    private final EmprestimoDAO emprestimoDAO = new EmprestimoDAO();
+    private java.util.List<Emprestimo> registros = java.util.Collections.emptyList();
+
+    private final AmigoDAO amigoDAO = new AmigoDAO();
+    private final FerramentaDAO ferramentaDAO = new FerramentaDAO();
+    private static final java.time.format.DateTimeFormatter FORMATO_DATA =
+            java.time.format.DateTimeFormatter.ofPattern("dd-MM-uuuu")
+                    .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+
+    private static int lerId(String texto) throws Mensagens {
+        try {
+            int id = Integer.parseInt(texto.strip());
+            if (id > 0) return id;
+        } catch (NumberFormatException erro) {
+            // A mensagem é a mesma para IDs inválidos e ausentes.
+        }
+        throw new Mensagens("Informe IDs positivos para o amigo e a ferramenta.");
+    }
+
+    private static java.sql.Date lerData(String texto) throws Mensagens {
+        try {
+            java.time.LocalDate data = java.time.LocalDate.parse(texto.strip(), FORMATO_DATA);
+            if (data.getYear() < 1000 || data.getYear() > 9999) {
+                throw new Mensagens("Informe um ano entre 1000 e 9999.");
+            }
+            return java.sql.Date.valueOf(data);
+        } catch (java.time.format.DateTimeParseException erro) {
+            throw new Mensagens("Informe uma data válida no formato DD-MM-AAAA.");
+        }
+    }
+
+    private static String formatarData(java.sql.Date data) {
+        return data == null ? "" : FORMATO_DATA.format(data.toLocalDate());
+    }
+
+    private static MaskFormatter mascaraCampo() {
+        try {
+            MaskFormatter mascara = new MaskFormatter("##-##-####");
+            mascara.setPlaceholderCharacter('_');
+            return mascara;
+        } catch (ParseException erro) {
+            throw new IllegalStateException(erro);
+        }
+    }
+
     public TelaEmprestimos() {
-        mascaraCampo();
         initComponents();
         modificarVisual();
-        this.emprestimoDAO = new EmprestimoDAO();
-        this.amigoDAO = new AmigoDAO();
-        this.ferramentaDAO = new FerramentaDAO();
-        carregaTabela();
+        tableEmprestimos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        ((DefaultTableModel) tableEmprestimos.getModel()).setRowCount(0);
+        tableEmprestimos.getSelectionModel().addListSelectionListener(evento -> {
+            int linha = tableEmprestimos.getSelectedRow();
+            if (!evento.getValueIsAdjusting() && linha >= 0) {
+                preencherCampos(registros.get(tableEmprestimos.convertRowIndexToModel(linha)));
+            }
+        });
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowOpened(java.awt.event.WindowEvent evento) {
+                atualizarTabela();
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        campoDataPed = new javax.swing.JFormattedTextField(mascaraData);
+        campoDataPed = new javax.swing.JFormattedTextField(mascaraCampo());
         campoFerramenta = new javax.swing.JTextField();
         btnCadastrar = new javax.swing.JButton();
         btnEditar = new javax.swing.JButton();
         btnExcluir = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         tableEmprestimos = new javax.swing.JTable();
-        campoDataDev = new javax.swing.JFormattedTextField(mascaraData);
+        campoDataDev = new javax.swing.JFormattedTextField(mascaraCampo());
         campoAmigo = new javax.swing.JTextField();
         btnExit = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
@@ -62,6 +106,7 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         setUndecorated(true);
         setResizable(false);
 
+        campoDataPed.setFocusLostBehavior(javax.swing.JFormattedTextField.PERSIST);
         campoDataPed.setForeground(new java.awt.Color(0, 0, 0));
         campoDataPed.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         campoDataPed.setSelectionColor(new java.awt.Color(0, 0, 0));
@@ -125,6 +170,7 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         tableEmprestimos.getTableHeader().setReorderingAllowed(false);
         jScrollPane1.setViewportView(tableEmprestimos);
 
+        campoDataDev.setFocusLostBehavior(javax.swing.JFormattedTextField.PERSIST);
         campoDataDev.setForeground(new java.awt.Color(0, 0, 0));
         campoDataDev.setToolTipText("");
         campoDataDev.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
@@ -254,273 +300,107 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditarActionPerformed
-        
-        try {
-        
-            int id = 0;
-            int idAmigo = 0;
-            int idFerramenta = 0;
-            java.sql.Date dataEmprestimo;
-            java.sql.Date dataDevolucao = null;
-            
-            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-            sdf.setLenient(false);
-            
-            if(this.tableEmprestimos.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione um empréstimo para editar.");
-            } else {
-                id = Integer.parseInt(this.tableEmprestimos.getValueAt(this.tableEmprestimos.getSelectedRow(), 0).toString());
-            }
-            
-            if (Integer.parseInt(this.campoAmigo.getText()) < 0 || Integer.parseInt(this.campoFerramenta.getText()) < 0) {
-                throw new Mensagens("ID deve ser um número positivo.");
-            } else {
-                idAmigo = Integer.parseInt(this.campoAmigo.getText());
-                idFerramenta = Integer.parseInt(this.campoFerramenta.getText());
-            }
-            
-            if(this.campoDataPed.getText().contains("_")) {
-                throw new Mensagens("Insira uma data de empréstimo válida.");
-            } else {
-                Date dataPadrao = sdf.parse(this.campoDataPed.getText());
-                long tempo = dataPadrao.getTime();
-                dataEmprestimo = new java.sql.Date(tempo);
-            }
-            
-            if(!this.campoDataDev.getText().contains("_")) {
-                Date dataPadrao = sdf.parse(this.campoDataDev.getText());
-                long tempo = dataPadrao.getTime();
-                dataDevolucao = new java.sql.Date(tempo);
-                
-                if(dataEmprestimo.getTime() > dataDevolucao.getTime()) {
-                    throw new Mensagens("Data de empréstimo se encontra após data de devolução.");
-                }
-            }
-            
-            ArrayList<Emprestimo> minhalista = emprestimoDAO.getMinhaLista();
-            
-            for (Emprestimo e : minhalista) { // checa se essas informações já estão cadastradas
-                if(e.getAmigo().getId() == idAmigo && e.getFerramenta().getId() == idFerramenta && e.getDataEmprestimo().getTime() == dataEmprestimo.getTime() && e.getId() != id){
-                    throw new Mensagens("Esse empréstimo já está cadastrado!");
-                }
-            }
-                        
-            if (ferramentaDAO.amigoComFerramenta(idFerramenta) > 0) {
-                Emprestimo e = emprestimoDAO.carregaEmprestimo(ferramentaDAO.amigoComFerramenta(idFerramenta));
-                
-                if(!(e.getAmigo().getId() == idAmigo && e.getFerramenta().getId() == idFerramenta && e.getDataEmprestimo().getTime() == dataEmprestimo.getTime())) {
-                    if(dataDevolucao != null && e.getDataEmprestimo().compareTo(dataDevolucao) == -1) {
-                        if (e.getId() != id) {
-                            throw new Mensagens("A data de devolução se encontra a frente de um empréstimo pendente desta ferramenta!");
-                        }
-                        throw new Mensagens("A ferramenta que você está tentando inserir está em um empréstimo pendente!");  
-                    }
-                }
-                
-            } else if (emprestimoDAO.amigoPendente(idAmigo) > 0) {
-                int ferramentaPendente = emprestimoDAO.amigoPendente(idAmigo);
-
-                String nome = amigoDAO.carregaAmigo(idAmigo).getNome();
-                String ferramenta = ferramentaDAO.carregaFerramenta(ferramentaPendente).getNome();
-                
-                int resposta = JOptionPane.showConfirmDialog(rootPane, nome+" ainda não devolveu a(o) "+ferramenta+ "\nTem certeza que deseja continuar?", "Confirmação", JOptionPane.YES_NO_OPTION);
-
-                if(resposta == JOptionPane.NO_OPTION) {
-                    throw new Mensagens("Empréstimo cancelado!");
-                }
-            }     
-            
-            
-            Emprestimo objeto = new Emprestimo(id,
-                                            amigoDAO.carregaAmigo(idAmigo),
-                                            ferramentaDAO.carregaFerramenta(idFerramenta),
-                                                dataEmprestimo,
-                                                dataDevolucao);
-            if (this.emprestimoDAO.UpdateEmprestimoBD(objeto)) {
-
-                // limpa os campos
-                this.campoAmigo.setText("");
-                this.campoFerramenta.setText("");
-                this.campoDataPed.setValue(null);
-                this.campoDataDev.setValue(null);
-                JOptionPane.showMessageDialog(rootPane, "Empréstimo alterado com sucesso!");
-
-            }
-            
-        } catch (Mensagens | SQLException erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (NumberFormatException erro) {
-            JOptionPane.showMessageDialog(null, "Favor, informe os IDs necessários para alteração.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (ParseException erro) {
-            JOptionPane.showMessageDialog(null, "Erro ao converter data inválida.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela();
-        }
-        
-    }//GEN-LAST:event_btnEditarActionPerformed
-
     private void btnCadastrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCadastrarActionPerformed
-
-        try {
-            // recebendo e validando dados da interface grafica.
-            this.amigoDAO = new AmigoDAO();
-            this.ferramentaDAO = new FerramentaDAO();
-            
-            int idAmigo = 0;
-            int idFerramenta = 0;
-            java.sql.Date dataEmprestimo;
-            java.sql.Date dataDevolucao = null;
-            
-            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-            sdf.setLenient(false);
-
-            if (Integer.parseInt(this.campoAmigo.getText()) < 0 || Integer.parseInt(this.campoFerramenta.getText()) < 0) {
-                throw new Mensagens("O ID inserido é inválido.");
-            } else{
-                idAmigo = Integer.parseInt(this.campoAmigo.getText());
-                idFerramenta = Integer.parseInt(this.campoFerramenta.getText());
-            }   
-            
-            if(this.campoDataPed.getText().contains("_")) {
-                throw new Mensagens("Insira uma data de empréstimo válida.");
-            } else {
-                Date dataPadrao = sdf.parse(this.campoDataPed.getText());
-                long tempo = dataPadrao.getTime();
-                dataEmprestimo = new java.sql.Date(tempo);
-            }
-            
-            if(!this.campoDataDev.getText().contains("_")) {
-                Date dataPadrao = sdf.parse(this.campoDataDev.getText());
-                long tempo = dataPadrao.getTime();
-                dataDevolucao = new java.sql.Date(tempo);
-                
-                if(dataEmprestimo.getTime() > dataDevolucao.getTime()) {
-                    throw new Mensagens("Data de empréstimo se encontra após data de devolução");
-                }
-            }
-            
-            if(emprestimoDAO.amigoPendente(idAmigo) > 0){ // verifica pendencias do amigo
-                int ferramentaPendente = emprestimoDAO.amigoPendente(idAmigo); // retorna id da ferramenta pendente
-
-                String nome = amigoDAO.carregaAmigo(idAmigo).getNome();
-                String ferramenta = ferramentaDAO.carregaFerramenta(ferramentaPendente).getNome();
-
-                int resposta = JOptionPane.showConfirmDialog(rootPane, nome+" ainda não devolveu a(o) "+ferramenta+ "\nTem certeza que deseja continuar?", "Confirmação", JOptionPane.YES_NO_OPTION);
-
-                if(resposta == JOptionPane.NO_OPTION) {
-                    throw new Mensagens("Empréstimo cancelado!");
-                }
-                
-            } else if (ferramentaDAO.amigoComFerramenta(idFerramenta) > 0) { // verifica disponibilidade da ferramenta
-                int idEmprestimo = ferramentaDAO.amigoComFerramenta(idFerramenta);
-                Emprestimo emprestimoPendente = emprestimoDAO.carregaEmprestimo(idEmprestimo);
-                String nome = emprestimoPendente.getAmigo().getNome();
-                
-                if(dataDevolucao == null || dataDevolucao.compareTo(emprestimoPendente.getDataEmprestimo()) == 1){
-                    throw new Mensagens("Esta ferramenta ainda não foi devolvida por " + nome);
-                }
-            } else {
-                idAmigo = Integer.parseInt(this.campoAmigo.getText());
-                idFerramenta = Integer.parseInt(this.campoFerramenta.getText());
-            }
-
-            ArrayList<Emprestimo> minhalista = emprestimoDAO.getMinhaLista();
-            
-            for (Emprestimo e : minhalista) { // checa se essas informações já estão cadastradas
-                if(e.getAmigo().getId() == idAmigo && e.getFerramenta().getId() == idFerramenta && e.getDataEmprestimo().getTime() == dataEmprestimo.getTime()){
-                    throw new Mensagens("Esse empréstimo já está cadastrado!");
-                }
-            } 
-            
-            Emprestimo objeto = new Emprestimo(amigoDAO.carregaAmigo(idAmigo),
-                                            ferramentaDAO.carregaFerramenta(idFerramenta),
-                                                dataEmprestimo,
-                                                dataDevolucao);
-            
-            if(this.emprestimoDAO.InsertEmprestimoBD(objeto)) {
-                
-                this.campoAmigo.setText("");
-                this.campoFerramenta.setText("");
-                this.campoDataPed.setValue(null);
-                this.campoDataDev.setValue(null);
-                
-                
-                JOptionPane.showMessageDialog(rootPane, "Empréstimo cadastrado com sucesso!");
-            }
-            
-        } catch (Mensagens | SQLException erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (NumberFormatException erro) {
-            JOptionPane.showMessageDialog(null, "Favor, informe os IDs necessários para o cadastro.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (ParseException erro) {
-            JOptionPane.showMessageDialog(null, "Erro ao converter data inválida.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela(); // atualiza a tabela.
-        }
+        salvar(0);
     }//GEN-LAST:event_btnCadastrarActionPerformed
 
-    private void btnExcluirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluirActionPerformed
-        
+    private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditarActionPerformed
         try {
-            int id = 0;
-            int idAmigo = 0;
-            
-            if(this.tableEmprestimos.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione um empréstimo para remover");
-            } else {
-                id = Integer.parseInt(this.tableEmprestimos.getValueAt(this.tableEmprestimos.getSelectedRow(), 0).toString());
-                idAmigo = emprestimoDAO.carregaEmprestimo(id).getAmigo().getId();
-            }
-            
-            int resposta = JOptionPane.showConfirmDialog(rootPane, "Tem certeza que deseja remover este empréstimo?", "Confirmação", JOptionPane.YES_NO_OPTION);
-            
-            if(resposta == JOptionPane.YES_OPTION && this.emprestimoDAO.DeleteEmprestimoBD(id)) {
-                JOptionPane.showMessageDialog(rootPane, "Empréstimo removido com sucesso!");
-            }
-        } catch (Mensagens | SQLException erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela();
+            salvar(Mensagens.idSelecionado(tableEmprestimos));
+        } catch (Mensagens erro) {
+            Mensagens.aviso(this, erro);
         }
-        
+    }//GEN-LAST:event_btnEditarActionPerformed
+
+    private void btnExcluirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluirActionPerformed
+        try {
+            int id = Mensagens.idSelecionado(tableEmprestimos);
+            if (!confirmar("Deseja excluir o registro selecionado?")) return;
+            if (!emprestimoDAO.DeleteEmprestimoBD(id)) {
+                throw new Mensagens("O empréstimo já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
     }//GEN-LAST:event_btnExcluirActionPerformed
 
     private void btnExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExitActionPerformed
-        TelaEmprestimos.this.dispose();
+        dispose();
     }//GEN-LAST:event_btnExitActionPerformed
 
-    private void carregaTabela() { // listando os objetos emprestimo na tabela
-
-        DefaultTableModel modelo = (DefaultTableModel) this.tableEmprestimos.getModel();
-        modelo.setNumRows(0);
-
-        ArrayList<Emprestimo> minhalista = emprestimoDAO.getMinhaLista();
-
-        for (Emprestimo e : minhalista) {
-            String stt = e.isStatus() ? "concluído" : "pendente";
-
-            modelo.addRow(new Object[]{
-                e.getId(),
-                e.getAmigo().getNome(),
-                e.getFerramenta().getNome(),
-                e.getDataEmprestimo(),
-                e.getDataDevolucao(),
-                stt
-            });
-            amigoDAO.UpdateQtdEmprest(e.getAmigo().getId()); // atualiza a qtd de emprestimos de um amigo
-        }
-    }
-    
-    private void mascaraCampo() {
+    private void salvar(int id) {
         try {
-            mascaraData = new MaskFormatter("##-##-####");
-            mascaraData.setPlaceholderCharacter('_');
-        } catch (ParseException ex) {
-            Logger.getLogger(TelaEmprestimos.class.getName()).log(Level.SEVERE, null, ex);
+            Emprestimo item = lerFormulario(id);
+            if (!item.isStatus() && emprestimoDAO.getMinhaLista().stream().anyMatch(outro -> outro.getId() != id
+                    && outro.getAmigo().getId() == item.getAmigo().getId() && !outro.isStatus())
+                    && !confirmar("Este amigo tem outro empréstimo pendente. Deseja continuar?")) {
+                return;
+            }
+            boolean salvo = id == 0 ? emprestimoDAO.InsertEmprestimoBD(item) : emprestimoDAO.UpdateEmprestimoBD(item);
+            if (!salvo) {
+                throw new Mensagens("O registro selecionado já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
         }
     }
-    
+
+    private Emprestimo lerFormulario(int id) throws Mensagens, SQLException {
+        int amigoId = lerId(campoAmigo.getText());
+        int ferramentaId = lerId(campoFerramenta.getText());
+        java.sql.Date inicio = lerData(campoDataPed.getText());
+        String textoFim = campoDataDev.getText().strip();
+        java.sql.Date fim = textoFim.isEmpty() || "__-__-____".equals(textoFim) ? null : lerData(textoFim);
+        if (fim != null && fim.before(inicio)) {
+            throw new Mensagens("A devolução deve ocorrer na mesma data do empréstimo ou depois.");
+        }
+        Model.Amigo amigo = amigoDAO.getMinhaLista().stream().filter(a -> a.getId() == amigoId)
+                .findFirst().orElseThrow(() -> new Mensagens("ID de amigo inexistente."));
+        Model.Ferramenta ferramenta = ferramentaDAO.getMinhaLista().stream().filter(f -> f.getId() == ferramentaId)
+                .findFirst().orElseThrow(() -> new Mensagens("ID de ferramenta inexistente."));
+        return new Emprestimo(id, amigo, ferramenta, inicio, fim);
+    }
+
+    private boolean confirmar(String pergunta) {
+        return JOptionPane.showConfirmDialog(this, pergunta, "Confirmação", JOptionPane.YES_NO_OPTION)
+                == JOptionPane.YES_OPTION;
+    }
+
+    private void preencherCampos(Emprestimo item) {
+        campoAmigo.setText(Integer.toString(item.getAmigo().getId()));
+        campoFerramenta.setText(Integer.toString(item.getFerramenta().getId()));
+        campoDataPed.setText(formatarData(item.getDataEmprestimo()));
+        campoDataDev.setValue(null);
+        if (item.getDataDevolucao() != null) campoDataDev.setText(formatarData(item.getDataDevolucao()));
+    }
+
+    private void limparCampos() {
+        campoAmigo.setText(""); campoFerramenta.setText("");
+        campoDataPed.setValue(null); campoDataDev.setValue(null);
+        tableEmprestimos.clearSelection();
+    }
+
+    private void atualizarTabela() {
+        try {
+            java.util.List<Emprestimo> atualizados = emprestimoDAO.getMinhaLista();
+            DefaultTableModel modelo = (DefaultTableModel) tableEmprestimos.getModel();
+            tableEmprestimos.clearSelection();
+            modelo.setRowCount(0);
+            registros = atualizados;
+            for (Emprestimo item : registros) {
+                modelo.addRow(new Object[]{item.getId(), item.getAmigo().getNome(), item.getFerramenta().getNome(),
+                        formatarData(item.getDataEmprestimo()), formatarData(item.getDataDevolucao()),
+                        item.isStatus() ? "Concluído" : "Pendente"});
+            }
+        } catch (SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
+    }
+
     private void modificarVisual() {
         Color accentColor = Color.decode("#000000");
         campoAmigo.setBorder(new LineBorder(accentColor, 1));

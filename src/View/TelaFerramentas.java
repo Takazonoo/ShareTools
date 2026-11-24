@@ -5,9 +5,6 @@ import Model.Ferramenta;
 import java.awt.Color;
 import java.awt.Font;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
@@ -17,14 +14,29 @@ import javax.swing.table.JTableHeader;
 
 public class TelaFerramentas extends javax.swing.JFrame {
     
-    private FerramentaDAO ferramentaDAO; // cria o vinculo com o Ferramenta.java
-    
+    private final FerramentaDAO ferramentaDAO = new FerramentaDAO();
+    private java.util.List<Ferramenta> registros = java.util.Collections.emptyList();
+
+    private final java.text.NumberFormat dinheiro = java.text.NumberFormat.getCurrencyInstance(
+            java.util.Locale.forLanguageTag("pt-BR"));
+
     public TelaFerramentas() {
         initComponents();
         modificarVisual();
-        this.ferramentaDAO = new FerramentaDAO(); // carrega DAO de Ferramenta.java
-        carregaTabela();
-        custoFerramentas();
+        tableFerramenta.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        ((DefaultTableModel) tableFerramenta.getModel()).setRowCount(0);
+        tableFerramenta.getSelectionModel().addListSelectionListener(evento -> {
+            int linha = tableFerramenta.getSelectedRow();
+            if (!evento.getValueIsAdjusting() && linha >= 0) {
+                preencherCampos(registros.get(tableFerramenta.convertRowIndexToModel(linha)));
+            }
+        });
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowOpened(java.awt.event.WindowEvent evento) {
+                atualizarTabela();
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -138,7 +150,7 @@ public class TelaFerramentas extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 22)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        jLabel1.setText("R$:");
+        jLabel1.setText("Total");
 
         jLabel2.setBackground(new java.awt.Color(0, 0, 0));
         jLabel2.setFont(new java.awt.Font("Segoe UI", 0, 22)); // NOI18N
@@ -164,9 +176,9 @@ public class TelaFerramentas extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(96, 96, 96)
-                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(campoCustoTotal, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(campoCustoTotal, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(41, 41, 41)
                         .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 235, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -289,194 +301,100 @@ public class TelaFerramentas extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnCadastrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCadastrarActionPerformed
-          try {
-            // recebendo e validando dados da interface grafica.
-            String nome = "";
-            String marca = "";
-            double custo = 0;
-
-            if (this.campoNome.getText().length() < 2) {
-                throw new Mensagens("Nome deve conter ao menos 2 caracteres.");
-            } else {
-                nome = this.campoNome.getText();
-            }
-            
-            if (this.campoMarca.getText().length() < 2) {
-                throw new Mensagens("Marca deve conter ao menos 2 caracteres.");
-            } else {
-                marca = this.campoMarca.getText();
-            }
-
-            if (this.campoCusto.getText().length() < 2) {
-                throw new Mensagens("Custo deve ser número e conter ao menos 2 dígitos.");
-            } else {
-                custo = Double.parseDouble(this.campoCusto.getText());
-            }
-            
-            Ferramenta objeto = new Ferramenta(nome, marca, custo);
-            
-            // envia os dados para o Controlador cadastrar
-            if (this.ferramentaDAO.FerramentaExistenteDB(nome)) {
-                String pergunta = "Foi encontrado outra ferramenta com este nome.\nDeseja adicionar mais uma no estoque?";
-                int resposta = JOptionPane.showConfirmDialog(rootPane, pergunta, "Confirmação", JOptionPane.YES_NO_OPTION);
-                
-                if(resposta == JOptionPane.YES_OPTION) {
-                    
-                    if(this.ferramentaDAO.InsertFerramentaBD(objeto)) {
-                        JOptionPane.showMessageDialog(rootPane, "Ferramenta cadastrada com sucesso!");
-
-                        // limpa campos da interface
-                        this.campoNome.setText("");
-                        this.campoMarca.setText("");
-                        this.campoCusto.setText("");
-                    }
-                }
-            } else {
-                if(this.ferramentaDAO.InsertFerramentaBD(objeto)) {
-                    JOptionPane.showMessageDialog(rootPane, "Ferramenta cadastrada com sucesso!");
-
-                    this.campoNome.setText("");
-                    this.campoMarca.setText("");
-                    this.campoCusto.setText("");
-                }
-            }
-
-        } catch (Mensagens erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (NumberFormatException erro) {
-            JOptionPane.showMessageDialog(null, "Custo inválido, informe um número.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (SQLException erro) {
-            Logger.getLogger(TelaFerramentas.class.getName()).log(Level.SEVERE, null, erro);
-        } finally {
-            carregaTabela(); // atualiza a tabela.
-            custoFerramentas(); // atualiza o valor das ferramentas.
-        }
+        salvar(0);
     }//GEN-LAST:event_btnCadastrarActionPerformed
 
-    private void btnExcluirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluirActionPerformed
-          
-        try {
-            int id = 0;
-            
-            if(this.tableFerramenta.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione uma ferramenta para remover");
-            } else {
-                id = Integer.parseInt(this.tableFerramenta.getValueAt(this.tableFerramenta.getSelectedRow(), 0).toString());
-            }
-            
-            String pergunta = "Tem certeza que deseja remover esta ferramenta?";
-            int resposta = JOptionPane.showConfirmDialog(rootPane, pergunta, "Confirmação", JOptionPane.YES_NO_OPTION);
-            
-            if(resposta == JOptionPane.YES_OPTION && this.ferramentaDAO.DeleteFerramentaBD(id)) {
-                JOptionPane.showMessageDialog(rootPane, "Ferramenta removida com sucesso!");
-            }
-        } catch (Mensagens erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela();
-            custoFerramentas();
-        }
-        
-    }//GEN-LAST:event_btnExcluirActionPerformed
-
     private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditarActionPerformed
-        
         try {
-            // recebendo e validando dados da interface grafica.
-        
-            int id = 0;
-            String nome = "";
-            String marca = "";
-            double custoAquisicao = 0;
-            
-            if (this.campoNome.getText().length() < 2) {
-                throw new Mensagens("Nome deve conter ao menos 2 caracteres.");
-            } else {
-                nome = this.campoNome.getText();
-            }
-
-            if (this.campoMarca.getText().length() < 2) {
-                throw new Mensagens("Marca deve conter ao menos 2 caracteres.");
-            } else {
-                marca = (this.campoMarca.getText());
-            }
-            
-            if (this.campoCusto.getText().length() < 2) {
-                throw new Mensagens("Custo deve ser número e conter ao menos 2 dígitos.");
-            } else {
-                custoAquisicao = Double.parseDouble(this.campoCusto.getText());
-            }
-            
-            ArrayList<Ferramenta> minhalista = ferramentaDAO.getMinhaLista();
-            if (this.tableFerramenta.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione uma ferramenta para alterar");
-            } else {
-                id = Integer.parseInt(this.tableFerramenta.getValueAt(this.tableFerramenta.getSelectedRow(), 0).toString());
-            }
-            
-            for (Ferramenta f : minhalista) { // checa se essas informações já estão cadastradas
-                if(f.getNome().equalsIgnoreCase(nome) && f.getMarca().equalsIgnoreCase(marca) && f.getId() != id){
-                    int resposta = JOptionPane.showConfirmDialog(rootPane, "Já existe uma ferramenta com o mesmo nome e marca.\nDeseja mesmo continuar?", "Confirmação", JOptionPane.YES_NO_OPTION);
-                    if(resposta == JOptionPane.NO_OPTION) {
-                        throw new Mensagens("Edição cancelada!");
-                    }
-                } 
-                else if(f.getNome().equalsIgnoreCase(nome) && f.getId() != id){
-                    int resposta = JOptionPane.showConfirmDialog(rootPane, "Foi encontrada outra ferramenta com este nome.\nDeseja mesmo continuar?", "Confirmação", JOptionPane.YES_NO_OPTION);
-                    if(resposta == JOptionPane.NO_OPTION) {
-                        throw new Mensagens("Edição cancelada!");
-                    }
-                }
-            } 
-
-            // envia os dados para a Ferramenta processar
-            if (this.ferramentaDAO.UpdateFerramentaBD(new Ferramenta(id, nome, marca, custoAquisicao))) {
-
-                // limpa os campos
-                this.campoNome.setText("");
-                this.campoMarca.setText("");
-                this.campoCusto.setText("");
-                JOptionPane.showMessageDialog(rootPane, "Ferramenta alterada com sucesso!");
-
-            }
-            System.out.println(this.ferramentaDAO.getMinhaLista().toString());
+            salvar(Mensagens.idSelecionado(tableFerramenta));
         } catch (Mensagens erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage());
-        } catch (NumberFormatException erro) {
-            JOptionPane.showMessageDialog(null, "Custo inválido, informe um número.");
-        } finally {
-            carregaTabela(); // atualiza a tabela.
-            custoFerramentas();
+            Mensagens.aviso(this, erro);
         }
-        
     }//GEN-LAST:event_btnEditarActionPerformed
 
+    private void btnExcluirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluirActionPerformed
+        try {
+            int id = Mensagens.idSelecionado(tableFerramenta);
+            if (!confirmar("Deseja excluir o registro selecionado?")) return;
+            if (!ferramentaDAO.DeleteFerramentaBD(id)) {
+                throw new Mensagens("O registro tem histórico de empréstimos ou já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
+    }//GEN-LAST:event_btnExcluirActionPerformed
+
     private void btnExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExitActionPerformed
-        TelaFerramentas.this.dispose();
+        dispose();
     }//GEN-LAST:event_btnExitActionPerformed
 
-    private void carregaTabela() { // listando os objetos ferramenta na tabela
-
-        DefaultTableModel modelo = (DefaultTableModel) this.tableFerramenta.getModel();
-        modelo.setNumRows(0);
-
-        ArrayList<Ferramenta> minhalista = ferramentaDAO.getMinhaLista();
-
-        for (Ferramenta a : minhalista) {
-            modelo.addRow(new Object[]{
-                a.getId(),
-                a.getNome(),
-                a.getMarca(),
-                a.getCustoAquisicao()
-            });
+    private void salvar(int id) {
+        try {
+            Ferramenta item = lerFormulario(id);
+            if (ferramentaDAO.getMinhaLista().stream().anyMatch(outra -> outra.getId() != id
+                    && outra.getNome().equalsIgnoreCase(item.getNome()))
+                    && !confirmar("Já existe uma ferramenta com esse nome. Deseja continuar?")) {
+                return;
+            }
+            boolean salvo = id == 0 ? ferramentaDAO.InsertFerramentaBD(item) : ferramentaDAO.UpdateFerramentaBD(item);
+            if (!salvo) {
+                throw new Mensagens("O registro selecionado já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
         }
     }
-    
-    private void custoFerramentas(){
-        String contadorCusto = String.valueOf(ferramentaDAO.getContadorCusto());
-        this.campoCustoTotal.setText(contadorCusto);
+
+    private Ferramenta lerFormulario(int id) throws Mensagens {
+        String nome = Mensagens.texto(campoNome.getText(), "Nome", 45);
+        String marca = Mensagens.texto(campoMarca.getText(), "Marca", 45);
+        String custo = campoCusto.getText().strip().replace(',', '.');
+        if (!custo.matches("[0-9]{1,3}(\\.[0-9]{1,2})?")) {
+            throw new Mensagens("Informe um custo de 0 a 999,99 com até duas casas decimais.");
+        }
+        return new Ferramenta(id, nome, marca, Double.parseDouble(custo));
     }
-    
+
+    private boolean confirmar(String pergunta) {
+        return JOptionPane.showConfirmDialog(this, pergunta, "Confirmação", JOptionPane.YES_NO_OPTION)
+                == JOptionPane.YES_OPTION;
+    }
+
+    private void preencherCampos(Ferramenta item) {
+        campoNome.setText(item.getNome());
+        campoMarca.setText(item.getMarca());
+        campoCusto.setText(Double.toString(item.getCustoAquisicao()));
+    }
+
+    private void limparCampos() {
+        campoNome.setText(""); campoMarca.setText(""); campoCusto.setText("");
+        tableFerramenta.clearSelection();
+    }
+
+    private void atualizarTabela() {
+        try {
+            java.util.List<Ferramenta> atualizados = ferramentaDAO.getMinhaLista();
+            DefaultTableModel modelo = (DefaultTableModel) tableFerramenta.getModel();
+            tableFerramenta.clearSelection();
+            modelo.setRowCount(0);
+            registros = atualizados;
+            for (Ferramenta item : registros) {
+                modelo.addRow(new Object[]{item.getId(), item.getNome(), item.getMarca(), dinheiro.format(item.getCustoAquisicao())});
+            }
+            java.math.BigDecimal total = registros.stream()
+                    .map(item -> java.math.BigDecimal.valueOf(item.getCustoAquisicao()))
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            campoCustoTotal.setText(dinheiro.format(total));
+            campoCustoTotal.setToolTipText(dinheiro.format(total));
+        } catch (SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
+    }
+
     private void modificarVisual() {
         Color accentColor = Color.decode("#000000");
         campoNome.setBorder(new LineBorder(accentColor, 1));

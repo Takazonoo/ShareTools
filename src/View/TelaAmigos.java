@@ -5,7 +5,6 @@ import Model.Amigo;
 import java.awt.Color;
 import java.awt.Font;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
@@ -15,13 +14,26 @@ import javax.swing.table.JTableHeader;
 
 public class TelaAmigos extends javax.swing.JFrame {
 
-    private AmigoDAO amigoDAO; // cria o vinculo com o Amigo.java
+    private final AmigoDAO amigoDAO = new AmigoDAO();
+    private java.util.List<Amigo> registros = java.util.Collections.emptyList();
 
     public TelaAmigos() {
         initComponents();
         modificarVisual();
-        this.amigoDAO = new AmigoDAO(); // carrega DAO de Amigo.java
-        this.carregaTabela();
+        tableAmigo.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        ((DefaultTableModel) tableAmigo.getModel()).setRowCount(0);
+        tableAmigo.getSelectionModel().addListSelectionListener(evento -> {
+            int linha = tableAmigo.getSelectedRow();
+            if (!evento.getValueIsAdjusting() && linha >= 0) {
+                preencherCampos(registros.get(tableAmigo.convertRowIndexToModel(linha)));
+            }
+        });
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowOpened(java.awt.event.WindowEvent evento) {
+                atualizarTabela();
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -233,160 +245,86 @@ public class TelaAmigos extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnEditaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditaActionPerformed
-
-        try {
-            // recebendo e validando dados da interface grafica.
-
-            int id = 0;
-            String nome = "";
-            long telefone =  0;
-
-            if (this.campoNome.getText().length() < 2) {
-                throw new Mensagens("Nome deve conter ao menos 2 caracteres.");
-            } else {
-                nome = this.campoNome.getText();
-            }
-
-            if (this.campoTelefone.getText().length() != 11) {
-                throw new Mensagens("Telefone deve ser número e conter 11 dígitos.");
-            } else {
-                telefone = Long.parseLong(this.campoTelefone.getText());
-            }
-
-            ArrayList<Amigo> minhalista = amigoDAO.getMinhaLista();
-            if (this.tableAmigo.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione um amigo para alterar");
-            } else {
-                id = Integer.parseInt(this.tableAmigo.getValueAt(this.tableAmigo.getSelectedRow(), 0).toString());
-            }
-
-            for (Amigo a : minhalista) { // checa se essas informações já estão cadastradas
-                if(a.getNome().equalsIgnoreCase(nome) && a.getTelefone() == telefone){
-                    throw new Mensagens("Esse amigo já está cadastrado!");
-                    }
-                else if(a.getTelefone() == telefone && a.getId() != id){
-                    throw new Mensagens("Esse telefone já está cadastrado!");
-                }
-                else if(a.getNome().equalsIgnoreCase(nome) && a.getId() != id){
-                    int resposta = JOptionPane.showConfirmDialog(rootPane, "Já existe um amigo com esse nome.\n Deseja atualizar o telefone?", "Confirmação", JOptionPane.YES_NO_OPTION);
-                    if(resposta == JOptionPane.YES_OPTION) {
-                        if(a.getTelefone() == telefone && a.getId() != id){
-                            throw new Mensagens("Esse telefone já está cadastrado!");
-                        } else if (this.amigoDAO.UpdateAmigoBD(new Amigo(a.getId(), nome, telefone))) {
-                            // limpa os campos
-                            this.campoNome.setText("");
-                            this.campoTelefone.setText("");
-                            throw new Mensagens("Telefone atualizado!");
-                        }
-                    }else{
-                        throw new Mensagens("Cadastro cancelado!");
-                    }
-                }
-            }
-
-            // envia os dados para o Amigo processar
-            if (this.amigoDAO.UpdateAmigoBD(new Amigo(id, nome, telefone))) {
-
-                JOptionPane.showMessageDialog(rootPane, "Amigo alterado com sucesso!");
-                // limpa os campos
-                this.campoNome.setText("");
-                this.campoTelefone.setText("");
-
-            }
-        } catch (Mensagens erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (NumberFormatException erro2) {
-            JOptionPane.showMessageDialog(null, "Telefone inválido, informe um número.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela(); // atualiza a tabela.
-        }
-
-    }//GEN-LAST:event_btnEditaActionPerformed
-
     private void btnCadastraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCadastraActionPerformed
-
-        try {
-            // recebendo e validando dados da interface grafica.
-            String nome = "";
-            long telefone = 0;
-            int quantEmprest = 0;
-
-            if (this.campoNome.getText().length() < 2) {
-                throw new Mensagens("Nome deve conter ao menos 2 caracteres.");
-            } else {
-                nome = this.campoNome.getText();
-            }
-
-            if (this.campoTelefone.getText().length() != 11) {
-                throw new Mensagens("Telefone deve ser número e conter 11 dígitos.");
-            } else {
-                telefone = Long.parseLong(this.campoTelefone.getText());
-            }
-
-            ArrayList<Amigo> minhalista = amigoDAO.getMinhaLista();
-
-            for (Amigo a : minhalista) { // checa se o amigo ja está cadastrado
-                if(a.getNome().equalsIgnoreCase(nome) && a.getTelefone() == telefone){
-                    throw new Mensagens("Esse amigo já está cadastrado!");
-                }
-                else if(a.getNome().equalsIgnoreCase(nome) && a.getTelefone() != telefone){
-                    int resposta = JOptionPane.showConfirmDialog(rootPane, nome+" já está cadastrado.\nDeseja atualizar o telefone?", "Confirmação", JOptionPane.YES_NO_OPTION);
-                    if(resposta == JOptionPane.YES_OPTION) {
-                        if (this.amigoDAO.UpdateAmigoBD(new Amigo(a.getId(), nome, telefone))) {
-                            // limpa os campos
-                            this.campoNome.setText("");
-                            this.campoTelefone.setText("");
-                            throw new Mensagens("Telefone atualizado!");
-                        }
-                    } else{
-                        throw new Mensagens("Cadastro cancelado!");
-                    }
-                }
-            }
-                // envia os dados para o Controlador cadastrar
-                if (this.amigoDAO.InsertAmigoBD(new Amigo(nome, telefone, quantEmprest))) {
-                    JOptionPane.showMessageDialog(rootPane, "Amigo cadastrado com sucesso!");
-                }
-
-                this.campoNome.setText("");
-                this.campoTelefone.setText("");
-
-        } catch (Mensagens | SQLException erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } catch (NumberFormatException erro) {
-            JOptionPane.showMessageDialog(null, "Telefone inválido, informe um número.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela(); // atualiza a tabela.
-        }
+        salvar(0);
     }//GEN-LAST:event_btnCadastraActionPerformed
 
-    private void btnExcluiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluiActionPerformed
-
+    private void btnEditaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditaActionPerformed
         try {
-            int id = 0;
-
-            if(this.tableAmigo.getSelectedRow() == -1) {
-                throw new Mensagens("Primeiro, selecione um amigo para remover");
-            } else {
-                id = Integer.parseInt(this.tableAmigo.getValueAt(this.tableAmigo.getSelectedRow(), 0).toString());
-            }
-
-            int resposta = JOptionPane.showConfirmDialog(rootPane, "Tem certeza que deseja remover este amigo?", "Confirmação", JOptionPane.YES_NO_OPTION);
-
-            if(resposta == JOptionPane.YES_OPTION && this.amigoDAO.DeleteAmigoBD(id)) {
-                JOptionPane.showMessageDialog(rootPane, "Amigo removido com sucesso!");
-            }
+            salvar(Mensagens.idSelecionado(tableAmigo));
         } catch (Mensagens erro) {
-            JOptionPane.showMessageDialog(null, erro.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-        } finally {
-            carregaTabela();
+            Mensagens.aviso(this, erro);
+        }
+    }//GEN-LAST:event_btnEditaActionPerformed
+
+    private void btnExcluiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcluiActionPerformed
+        try {
+            int id = Mensagens.idSelecionado(tableAmigo);
+            if (!confirmar("Deseja excluir o registro selecionado?")) return;
+            if (!amigoDAO.DeleteAmigoBD(id)) {
+                throw new Mensagens("O registro tem histórico de empréstimos ou já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
         }
     }//GEN-LAST:event_btnExcluiActionPerformed
 
     private void btnExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExitActionPerformed
-        TelaAmigos.this.dispose();
+        dispose();
     }//GEN-LAST:event_btnExitActionPerformed
+
+    private void salvar(int id) {
+        try {
+            Amigo item = lerFormulario(id);
+            boolean salvo = id == 0 ? amigoDAO.InsertAmigoBD(item) : amigoDAO.UpdateAmigoBD(item);
+            if (!salvo) {
+                throw new Mensagens("O registro selecionado já foi removido.");
+            }
+            atualizarTabela();
+            limparCampos();
+        } catch (Mensagens | SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
+    }
+
+    private Amigo lerFormulario(int id) throws Mensagens {
+        String nome = Mensagens.texto(campoNome.getText(), "Nome", 50);
+        String telefone = campoTelefone.getText().strip();
+        if (!telefone.matches("[1-9][0-9]{10}")) throw new Mensagens("Informe um telefone com DDD e 11 dígitos.");
+        return new Amigo(id, nome, Long.parseLong(telefone));
+    }
+
+    private boolean confirmar(String pergunta) {
+        return JOptionPane.showConfirmDialog(this, pergunta, "Confirmação", JOptionPane.YES_NO_OPTION)
+                == JOptionPane.YES_OPTION;
+    }
+
+    private void preencherCampos(Amigo item) {
+        campoNome.setText(item.getNome());
+        campoTelefone.setText(Long.toString(item.getTelefone()));
+    }
+
+    private void limparCampos() {
+        campoNome.setText(""); campoTelefone.setText("");
+        tableAmigo.clearSelection();
+    }
+
+    private void atualizarTabela() {
+        try {
+            java.util.List<Amigo> atualizados = amigoDAO.getMinhaLista();
+            DefaultTableModel modelo = (DefaultTableModel) tableAmigo.getModel();
+            tableAmigo.clearSelection();
+            modelo.setRowCount(0);
+            registros = atualizados;
+            for (Amigo item : registros) {
+                modelo.addRow(new Object[]{item.getId(), item.getNome(), item.getTelefone(), item.getQuantEmprest()});
+            }
+        } catch (SQLException erro) {
+            Mensagens.aviso(this, erro);
+        }
+    }
 
     private void modificarVisual() {
         Color accentColor = Color.decode("#000000");
@@ -406,24 +344,6 @@ public class TelaAmigos extends javax.swing.JFrame {
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment( JLabel.CENTER );
         tableAmigo.setDefaultRenderer(Object.class, centerRenderer);
-    }
-
-    private void carregaTabela() { // listando os objetos amigo na tabela
-
-        DefaultTableModel modelo = (DefaultTableModel) this.tableAmigo.getModel();
-        modelo.setNumRows(0);
-
-        ArrayList<Amigo> minhalista = amigoDAO.getMinhaLista();
-
-        for (Amigo a : minhalista) {
-            modelo.addRow(new Object[]{
-                a.getId(),
-                a.getNome(),
-                a.getTelefone(),
-                a.getQuantEmprest()
-            });
-            amigoDAO.UpdateQtdEmprest(a.getId()); // atualiza a qtd de emprestimos de um amigo
-        }
     }
 
     public static void main(String args[]) {

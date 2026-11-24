@@ -1,11 +1,10 @@
 package Principal;
 
 import View.TelaMenu;
-
+import java.awt.EventQueue;
 
 public class Principal {
-
     public static void main(String[] args) {
-        new TelaMenu().setVisible(true);
+        EventQueue.invokeLater(() -> new TelaMenu().setVisible(true));
     }
 }
